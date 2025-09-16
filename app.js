@@ -348,8 +348,21 @@ app.post('/api/scan', (req, res) => {
   
   log(LOG_LEVELS.DETAIL, CATEGORIES.POWERSHELL, `Executing: ${powershellCommand}`);
   
-  exec(`${powershellExecutable} -NoProfile -NonInteractive -ExecutionPolicy Bypass -Command "${powershellCommand}"`, { maxBuffer: 10 * 1024 * 1024 }, (error, stdout, stderr) => {
+  exec(`${powershellExecutable} -NoProfile -NonInteractive -ExecutionPolicy Bypass -Command "${powershellCommand}"`, { 
+    maxBuffer: 10 * 1024 * 1024,
+    timeout: 30000,
+    killSignal: 'SIGKILL'
+  }, (error, stdout, stderr) => {
     if (error) {
+      // Handle timeout errors
+      if (error.killed && error.signal === 'SIGKILL') {
+        log(LOG_LEVELS.ERROR, CATEGORIES.SCAN, `Scan operation timed out after 30 seconds`);
+        return res.status(408).json({ 
+          error: 'Scan operation timed out',
+          details: 'The PowerShell command took too long to complete and was terminated'
+        });
+      }
+      
       log(LOG_LEVELS.ERROR, CATEGORIES.SCAN, `Error scanning files: ${error.message}`);
       return res.status(500).json({ 
         error: error.message,
@@ -456,8 +469,22 @@ app.post('/api/delete', (req, res) => {
   
   log(LOG_LEVELS.DETAIL, CATEGORIES.POWERSHELL, `Executing (truncated): ${powershellCommand.substring(0, 100)}...`);
   
-  exec(`${powershellExecutable} -NoProfile -NonInteractive -ExecutionPolicy Bypass -Command "${powershellCommand}"`, { maxBuffer: 10 * 1024 * 1024 }, (error, stdout, stderr) => {
+  exec(`${powershellExecutable} -NoProfile -NonInteractive -ExecutionPolicy Bypass -Command "${powershellCommand}"`, { 
+    maxBuffer: 10 * 1024 * 1024,
+    timeout: 30000,
+    killSignal: 'SIGKILL'
+  }, (error, stdout, stderr) => {
     if (error) {
+      // Handle timeout errors
+      if (error.killed && error.signal === 'SIGKILL') {
+        log(LOG_LEVELS.ERROR, CATEGORIES.DELETE, `Delete operation timed out after 30 seconds`);
+        return res.status(408).json({ 
+          error: 'Delete operation timed out',
+          details: 'The PowerShell command took too long to complete and was terminated',
+          filesAttempted: filesToDelete.length
+        });
+      }
+      
       log(LOG_LEVELS.ERROR, CATEGORIES.DELETE, `Error deleting files: ${error.message}`);
       return res.status(500).json({ 
         error: error.message,
