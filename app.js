@@ -1,12 +1,70 @@
 const express = require('express');
-const bodyParser = require('body-parser');
 const path = require('path');
 const fs = require('fs');
 const { exec } = require('child_process');
 const chalk = require('chalk');
 const os = require('os');
 
-// --- Logger Utility ---
+// Function to resolve PowerShell executable path
+function getPowerShellExecutable() {
+  // Try to find PowerShell executable
+  const powerShellPaths = [
+    'powershell.exe',
+    'pwsh.exe',
+    'C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe',
+    'C:\\Windows\\SysWOW64\\WindowsPowerShell\\v1.0\\powershell.exe'
+  ];
+  
+  for (const psPath of powerShellPaths) {
+    try {
+      // Use 'where' command on Windows to check if executable exists
+      const { execSync } = require('child_process');
+      const result = execSync(`where "${psPath}"`, { stdio: 'pipe' });
+      if (result && result.toString().trim()) {
+        return psPath;
+      }
+    } catch (error) {
+      // Continue to next path
+    }
+  }
+  
+  // Fallback to 'powershell'
+  return 'powershell';
+}
+
+// Security function to validate file paths
+function isValidFilePath(filePath, allowedRoots) {
+  try {
+    // Resolve the file path to handle relative paths and prevent directory traversal
+    const resolvedPath = path.resolve(filePath);
+    
+    // Check if the file path is under any of the allowed roots
+    for (const root of allowedRoots) {
+      const resolvedRoot = path.resolve(root);
+      // Ensure the resolved path starts with the resolved root
+      if (resolvedPath.startsWith(resolvedRoot)) {
+        return true;
+      }
+    }
+    
+    return false;
+  } catch (error) {
+    log(LOG_LEVELS.ERROR, CATEGORIES.DELETE, `Error validating file path: ${error.message}`);
+    return false;
+  }
+}
+
+// Add a function to get allowed root directories (can be extended with config)
+function getAllowedRoots() {
+  // For now, allow common Visio template directories
+  // This could be expanded to read from config file
+  return [
+    'Z:\\ENGINEERING TEMPLATES\\VISIO SHAPES 2025',
+    'C:\\Users',
+    'C:\\Program Files',
+    'C:\\Program Files (x86)'
+  ];
+}
 const LOG_LEVELS = {
   INFO: 'INFO',
   SUCCESS: 'SUCCESS',
@@ -170,8 +228,8 @@ function getLocalIPs() {
   const ips = [];
   
   for (const interfaceName in interfaces) {
-    const interface = interfaces[interfaceName];
-    for (const connection of interface) {
+    const iface = interfaces[interfaceName];
+    for (const connection of iface) {
       // Skip internal (localhost) and non-IPv4 addresses
       if (!connection.internal && connection.family === 'IPv4') {
         ips.push(connection.address);
@@ -183,13 +241,13 @@ function getLocalIPs() {
 }
 
 const app = express();
-const PORT = 3000;
-const HOST = '0.0.0.0'; // Bind to all interfaces
+const PORT = process.env.PORT || 3000;
+const HOST = process.env.HOST || 'localhost'; // Default to localhost for security
 const NODE_ENV = process.env.NODE_ENV || 'development';
 const DEFAULT_SCAN_DIR_DISPLAY = 'Z:\\\\ENGINEERING TEMPLATES\\\\VISIO SHAPES 2025'; // For display
 
 // Middleware
-app.use(bodyParser.json());
+app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
 // Serve the main page
@@ -204,11 +262,12 @@ app.post('/api/scan', (req, res) => {
   log(LOG_LEVELS.INFO, CATEGORIES.SCAN, `Request to scan directory: ${targetDir}`);
   
   const escapedPath = targetDir.replace(/'/g, "''");
-  const powershellCommand = `Get-ChildItem -Path '${escapedPath}' -Recurse -File -Force -Include "~\`$*.vssx","~\`$*.vsdx","~\`$*.vstx","~\`$*.vsdm","~\`$*.vsd" | Select-Object -Property FullName,Name | ConvertTo-Json`;
+  const powershellExecutable = getPowerShellExecutable();
+  const powershellCommand = `Get-ChildItem -Path '${escapedPath}' -Recurse -File -Force -Include "~\\$*.vssx","~\\$*.vsdx","~\\$*.vstx","~\\$*.vsdm","~\\$*.vsd" | Select-Object -Property FullName,Name | ConvertTo-Json`;
   
   log(LOG_LEVELS.DETAIL, CATEGORIES.POWERSHELL, `Executing: ${powershellCommand}`);
   
-  exec(`powershell -Command "${powershellCommand}"`, { maxBuffer: 1024 * 1024 }, (error, stdout, stderr) => {
+  exec(`${powershellExecutable} -NoProfile -NonInteractive -ExecutionPolicy Bypass -Command "${powershellCommand}"`, { maxBuffer: 1024 * 1024 }, (error, stdout, stderr) => {
     if (error) {
       log(LOG_LEVELS.ERROR, CATEGORIES.SCAN, `Error scanning files: ${error.message}`);
       return res.status(500).json({ 
@@ -286,13 +345,27 @@ app.post('/api/delete', (req, res) => {
     });
   }
   
+  // Validate file paths for security
+  const allowedRoots = getAllowedRoots();
+  const unauthorizedFiles = filesToDelete.filter(file => !isValidFilePath(file, allowedRoots));
+  if (unauthorizedFiles.length > 0) {
+    log(LOG_LEVELS.ERROR, CATEGORIES.DELETE, `Unauthorized file paths in request: ${unauthorizedFiles.length} files outside allowed roots.`);
+    return res.status(403).json({
+      error: 'Unauthorized file paths',
+      details: 'All file paths must be within allowed directories for security',
+      unauthorizedCount: unauthorizedFiles.length,
+      allowedRoots: allowedRoots
+    });
+  }
+  
   const fileListString = filesToDelete.map(file => `'${file.replace(/'/g, "''")}'`).join(',');
   
+  const powershellExecutable = getPowerShellExecutable();
   const powershellCommand = `@(${fileListString}) | ForEach-Object { Remove-Item -Path $_ -Force }`;
   
   log(LOG_LEVELS.DETAIL, CATEGORIES.POWERSHELL, `Executing (truncated): ${powershellCommand.substring(0, 100)}...`);
   
-  exec(`powershell -Command "${powershellCommand}"`, { maxBuffer: 1024 * 1024 }, (error, stdout, stderr) => {
+  exec(`${powershellExecutable} -NoProfile -NonInteractive -ExecutionPolicy Bypass -Command "${powershellCommand}"`, { maxBuffer: 1024 * 1024 }, (error, stdout, stderr) => {
     if (error) {
       log(LOG_LEVELS.ERROR, CATEGORIES.DELETE, `Error deleting files: ${error.message}`);
       return res.status(500).json({ 
