@@ -45,12 +45,15 @@ function getPowerShellExecutable() {
 // Security function to validate file paths
 function isValidFilePath(filePath, allowedRoots) {
   try {
-    const resolvedPath = path.win32.resolve(filePath).toLowerCase();
+    // Resolve the filesystem canonical path to prevent bypassing through junctions/symlinks
+    const canonicalPath = fs.realpathSync(path.win32.resolve(filePath)).toLowerCase();
     
     for (const root of allowedRoots) {
-      const resolvedRoot = path.win32.resolve(root).toLowerCase();
-      // Ensure the resolved path is equal to or nested under the root
-      if (resolvedPath === resolvedRoot || resolvedPath.startsWith(resolvedRoot + '\\')) {
+      // Resolve the filesystem canonical path for the root as well
+      const canonicalRoot = fs.realpathSync(path.win32.resolve(root)).toLowerCase();
+      // Ensure the canonical path is equal to or nested under the root
+      // Ensure each resolved root ends with a path separator before testing startsWith
+      if (canonicalPath === canonicalRoot || canonicalPath.startsWith(canonicalRoot + '\\')) {
         return true;
       }
     }
@@ -287,16 +290,36 @@ app.post('/api/scan', (req, res) => {
   
   // Validate targetDir against allowed roots before scanning
   const allowedRoots = getAllowedRoots();
-  const resolvedTargetDir = path.win32.resolve(targetDir).toLowerCase();
+  let canonicalTargetDir;
+  
+  try {
+    // Resolve the filesystem canonical path to prevent bypassing through junctions/symlinks
+    canonicalTargetDir = fs.realpathSync(path.win32.resolve(targetDir)).toLowerCase();
+  } catch (error) {
+    log(LOG_LEVELS.ERROR, CATEGORIES.SCAN, `Error resolving scan directory path: ${error.message}`);
+    return res.status(403).json({
+      error: 'Invalid scan directory path',
+      details: 'The scan directory path could not be resolved',
+      allowedRoots: allowedRoots
+    });
+  }
   
   let isValidTarget = false;
   for (const root of allowedRoots) {
-    // Check if targetDir is equal to or nested under an allowed root
-    if (resolvedTargetDir === root || resolvedTargetDir.startsWith(root + '\\')) {
-      isValidTarget = true;
-      // Use the resolved path for scanning
-      targetDir = path.win32.resolve(targetDir);
-      break;
+    try {
+      // Resolve the filesystem canonical path for the root as well
+      const canonicalRoot = fs.realpathSync(path.win32.resolve(root)).toLowerCase();
+      // Ensure the canonical path is equal to or nested under the root
+      // Ensure each resolved root ends with a path separator before testing startsWith
+      if (canonicalTargetDir === canonicalRoot || canonicalTargetDir.startsWith(canonicalRoot + '\\')) {
+        isValidTarget = true;
+        // Use the resolved path for scanning
+        targetDir = path.win32.resolve(targetDir);
+        break;
+      }
+    } catch (error) {
+      log(LOG_LEVELS.WARN, CATEGORIES.SCAN, `Error resolving allowed root path '${root}': ${error.message}`);
+      // Continue to next root
     }
   }
   
