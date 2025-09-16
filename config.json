@@ -1,11 +1,11 @@
 {
   "default_scan_path": "Z:\\ENGINEERING TEMPLATES\\VISIO SHAPES 2025",
   "temp_file_patterns": [
-    "~$$*.~vssx",
-    "~$$*.~vsdx",
-    "~$$*.~vstx",
-    "~$$*.~vsdm",
-    "~$$*.~vsd"
+    "~$*.vssx",
+    "~$*.vsdx",
+    "~$*.vstx",
+    "~$*.vsdm",
+    "~$*.vsd"
   ],
   "powershell_scripts_path": "scripts",
   "cli_tool_path": "cli-tool"

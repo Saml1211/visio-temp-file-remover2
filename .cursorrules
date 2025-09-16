@@ -15,6 +15,20 @@
 - File operations are performed exclusively by PowerShell scripts
 - Configuration is loaded from `config.json` or environment-specific override
 
+## Critical JSON Parsing Patterns
+- PowerShell scripts may return single objects `{...}` OR arrays `[{...}]` depending on result count
+- Python JSON parsing MUST handle both formats gracefully
+- Always check for `isinstance(result_data, dict)` and convert to array if needed
+- Empty results should be consistently returned as empty arrays `[]`
+- File objects must contain `FullName` property for path extraction
+
+## UX Design Patterns
+- Remove redundant informational text that interrupts main workflow
+- Consolidate duplicate status messages into single clear communications
+- Position help functionality where users expect it (directory selection) without blocking flow
+- Eliminate duplicate "no files found" messages - handle once in core logic
+- Clean startup: Banner + environment detection + direct to functionality
+
 ## Naming Conventions
 - PowerShell scripts use PascalCase verb-noun format (e.g., `Scan-VisioTempFiles.ps1`)
 - Python uses snake_case for functions and variables
@@ -53,18 +67,54 @@
 - Environment-specific overrides in `config.[environment].json`
 - Environment variables can override configuration values
 
+## CLI UX Best Practices (Learned from Recent Improvements)
+- Minimize explanatory text at startup - users want to get to functionality quickly
+- Consolidate scanning operations into single status message
+- Handle PowerShell JSON output variability robustly (single vs. array results)
+- Keep help accessible but non-intrusive to main workflow
+- Eliminate all duplicate status messages through careful logic flow design
+- Test both "files found" and "no files found" scenarios to ensure clean messaging
+
+## PowerShell Integration Lessons
+- ConvertTo-Json behavior changes based on result count (single object vs. array)
+- Always test JSON parsing with both single file and multiple file scenarios
+- Use proper error handling for JSON decode failures
+- Debug output is invaluable for diagnosing PowerShell/Python communication issues
+
 ## Testing Strategy
 - PowerShell scripts should be testable with Pester
 - API endpoints should have integration tests
 - CLI should have end-to-end workflow tests
+- Test both single file and multiple file discovery scenarios
+- Verify UX improvements don't introduce regressions
 
 ## Documentation Standards
 - PowerShell scripts should have comment-based help
 - Python functions should have docstrings
 - JavaScript should have JSDoc comments for functions
 - READMEs should be maintained for component usage
+- Update documentation when UX flows change
 
 ## Future Evolution
 - Plan for migrating from PowerShell to Python for core operations
 - Prepare for cross-platform support in future versions
-- Consider supporting additional file types beyond Visio 
+- Consider supporting additional file types beyond Visio
+- Apply CLI UX improvements to web interface for consistency
+
+## Web UI Development Learnings (From Recent Visual Overhaul)
+- **Styling Philosophy**: Prioritize a modern, responsive design with clear visual hierarchy, consistent spacing, and intuitive interactive elements (buttons, toggles, inputs). Ensure CSS is well-organized and avoids conflicting rules.
+- **Dark Mode Implementation**: Ensure all UI elements have distinct and accessible dark mode variants. Test thoroughly for contrast and readability.
+- **Node.js Console Logging**: Utilize `chalk` in Node.js backends (e.g., `web-ui/app.js`) for colored and structured console output, mirroring the benefits of `colorama` in Python for improved development and debugging.
+- **Iterative UI Refinement Process**: 
+    1. Identify visual/layout issues (user feedback, direct observation).
+    2. Prioritize issues based on impact.
+    3. Systematically implement CSS and HTML changes.
+    4. Review changes and gather feedback.
+    5. Repeat until desired visual state is achieved.
+- **CSS Debugging**: When visual anomalies occur, common culprits include:
+    - Conflicting or duplicate CSS rules (especially for complex components like toggle switches).
+    - Incorrect selector specificity.
+    - Excessive or insufficient padding/margins impacting layout.
+    - Missing styles for certain states or elements.
+- **HTML for Styling**: Ensure HTML structure supports the intended CSS. For example, for flexbox layouts, ensure items to be aligned are direct children of the flex container.
+- **Accessibility for Web**: Include `aria-label` attributes for interactive elements like custom toggles to ensure screen reader compatibility. 

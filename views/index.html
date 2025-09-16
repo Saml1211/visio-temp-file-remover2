@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Visio Temp File Finder & Remover</title>
+    <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="header-main-content">
+                <h1>Visio Temp File Finder & Remover</h1>
+                <div class="mode-toggles">
+                    <div class="mode-toggle">
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="wideMode" aria-label="Toggle wide mode display">
+                            <span class="slider"></span>
+                        </label>
+                        <span class="toggle-label">Wide Mode</span>
+                    </div>
+                    <div class="mode-toggle">
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="darkModeToggle" aria-label="Toggle dark mode theme">
+                            <span class="slider"></span>
+                        </label>
+                        <span class="toggle-label">Dark Mode</span>
+                    </div>
+                </div>
+            </div>
+            <p class="description">Find and remove temporary Visio files (~$*.vssx, ~$*.vsdx, etc.)</p>
+        </header>
+        
+        <div class="search-section">
+            <div class="input-group">
+                <label for="directoryPath">Directory to Scan:</label>
+                <input type="text" id="directoryPath" value="Z:\ENGINEERING TEMPLATES\VISIO SHAPES 2025">
+            </div>
+            <button id="scanButton" class="btn">🔍 Scan for Files</button>
+        </div>
+        
+        <div class="results-section">
+            <div class="results-header">
+                <h2>Files Found: <span id="fileCount">0</span></h2>
+                <button id="deleteButton" class="btn btn-danger" disabled>🗑️ Delete Selected Files</button>
+            </div>
+            
+            <div class="file-list-container">
+                <div class="select-all-container">
+                    <input type="checkbox" id="selectAll">
+                    <label for="selectAll">Select All</label>
+                </div>
+                <ul id="fileList" class="file-list"></ul>
+            </div>
+        </div>
+        
+        <div id="statusMessage" class="status-message"></div>
+    </div>
+    
+    <script src="/main.js"></script>
+</body>
+</html>

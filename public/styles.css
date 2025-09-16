@@ -1,0 +1,747 @@
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    line-height: 1.6;
+    color: #333;
+    background-color: #f7f9fc;
+    padding: 20px;
+    transition: background-color 0.3s ease;
+}
+
+body.loading {
+    background-color: #e0e0e0;
+    pointer-events: none;
+}
+
+body.dark-mode {
+    background-color: #000000;
+    color: #ecf0f1;
+}
+
+body.dark-mode .container {
+    background-color: #1e1e1e;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+}
+
+body.dark-mode header {
+    border-bottom: 1px solid #333333;
+}
+
+body.dark-mode h1 {
+    color: #ecf0f1;
+}
+
+body.dark-mode .description {
+    color: #cad1d7; /* Adjusted for better contrast on dark container bg */
+}
+
+body.dark-mode label {
+    color: #ecf0f1;
+}
+
+body.dark-mode input[type="text"] {
+    background-color: #222222;
+    color: #ecf0f1;
+    border: 1px solid #444444;
+}
+
+body.dark-mode input[type="text"]:focus {
+    border-color: #3498db;
+    box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
+}
+
+body.dark-mode .btn-primary {
+    background-color: #3498db;
+}
+body.dark-mode .btn-primary:hover {
+    background-color: #2980b9;
+}
+
+body.dark-mode .btn-danger {
+    background-color: #d32f2f; /* Adjusted for better text contrast (white text) */
+}
+body.dark-mode .btn-danger:hover {
+    background-color: #c0392b;
+}
+
+body.dark-mode .btn:disabled {
+    background-color: #7f8c8d;
+    color: #f5f5f5; /* Adjusted for better contrast on disabled button bg */
+}
+
+body.dark-mode .results-header {
+    color: #ecf0f1;
+    border-bottom: 1px solid #333333;
+    padding-bottom: 15px;
+    margin-top: 20px;
+}
+
+body.dark-mode .file-list-container {
+    background-color: #222222;
+    border-top: 2px solid #444444;
+    border-left: 1px solid #333333;
+    border-right: 1px solid #333333;
+    border-bottom: 1px solid #333333;
+    margin-bottom: 20px;
+}
+
+body.dark-mode .select-all-container {
+    background-color: #1a1a1a;
+    border-bottom: 1px solid #333333;
+}
+
+body.dark-mode .file-list {
+    border: 1px solid #333333;
+}
+
+body.dark-mode .file-item {
+    border-bottom: 1px solid #333333;
+}
+
+body.dark-mode .file-item:hover {
+    background-color: #333333;
+}
+
+body.dark-mode .file-item label .file-title {
+    color: #ecf0f1;
+}
+
+body.dark-mode .file-item label .file-path {
+    color: #bdc3c7;
+}
+
+body.dark-mode .file-item:hover label .file-path {
+    color: #ecf0f1; /* Matches title color on hover for better contrast */
+}
+
+body.dark-mode .status-message.success {
+    background-color: #27ae60;
+    color: #fff;
+    border: 1px solid #1e8449;
+}
+
+body.dark-mode .status-message.error {
+    background-color: #c0392b;
+    color: #fff;
+    border: 1px solid #a93226;
+}
+
+/* Wide mode styles */
+.container {
+    max-width: 1100px;
+    margin: 0 auto;
+    background-color: white;
+    padding: 30px;
+    border-radius: 4px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    transition: max-width 0.3s ease;
+}
+
+body.wide-mode .container {
+    max-width: 90%;
+}
+
+.header-controls {
+    margin-top: 5px;
+}
+
+.mode-toggles {
+    display: flex;
+    gap: 20px;
+    align-items: center;
+    margin-left: auto;
+    flex-shrink: 0;
+}
+
+.mode-toggle {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+/* Removed - using proper toggle-switch implementation */
+
+.toggle-label {
+    font-size: 0.9em;
+    font-weight: 500;
+    color: #495057;
+    white-space: nowrap;
+    -webkit-user-select: none; /* Safari support */
+    user-select: none; /* Prevent text selection */
+}
+
+/* Remove old toggle styling - now using proper toggle-switch class */
+
+/* Dark mode adjustments for wide mode toggle */
+body.dark-mode .toggle-label {
+    color: #e2e8f0;
+}
+
+body.dark-mode .toggle-label::before {
+    background-color: #444444;
+}
+
+body.dark-mode .toggle-input:checked + .toggle-label::before {
+    background-color: #3498db;
+}
+
+/* Responsive adjustments for wide mode */
+@media (max-width: 768px) {
+    body.wide-mode .container {
+        max-width: 100%;
+        padding: 15px;
+    }
+    
+    .header-main-content {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    
+    .mode-toggles {
+        margin-left: 0;
+        margin-top: 10px;
+        width: 100%;
+        justify-content: flex-start;
+    }
+    
+    .header-controls {
+        align-items: flex-start;
+    }
+    
+    .mode-toggle {
+        margin-top: 5px;
+    }
+
+    .search-section {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .input-group {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .input-group input[type="text"] {
+        margin-right: 0;
+        margin-bottom: 10px;
+    }
+
+    .input-group label {
+        margin-bottom: 5px;
+        margin-right: 0;
+    }
+
+    #scanButton {
+        width: 100%;
+    }
+}
+
+header {
+    margin-bottom: 25px;
+    border-bottom: 1px solid #eaeaea;
+    padding-bottom: 20px;
+}
+
+.header-main-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 10px;
+}
+
+.header-main-content h1 {
+    margin-right: 20px;
+    flex-shrink: 0;
+    line-height: 1.2;
+}
+
+h1 {
+    color: #2c3e50;
+    margin-bottom: 0;
+    font-size: 2.5em;
+    font-weight: 700;
+}
+
+h2 { /* General section titles */
+    font-size: 1.8em;
+    font-weight: 600;
+}
+
+.description {
+    color: #7f8c8d;
+    font-size: 1em;
+    line-height: 1.5;
+    margin-top: 0;
+}
+
+body.dark-mode .search-section {
+    background-color: #2d2d2d;
+    border-color: #444444;
+    margin-top: 20px;
+}
+
+.search-section {
+    display: flex;
+    align-items: flex-end;
+    gap: 15px;
+    margin-bottom: 30px;
+    padding: 20px;
+    background-color: #f0f3f5;
+    border-radius: 8px;
+    border: 1px solid #dfe4e7;
+}
+
+.input-group {
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1;
+    gap: 6px;
+}
+
+.input-group label {
+    margin-right: 0;
+    margin-bottom: 0;
+    white-space: nowrap;
+    font-weight: 600;
+    color: #495057;
+}
+
+.input-group input[type="text"] {
+    flex-grow: 1;
+    margin-right: 0;
+    padding: 10px 14px;
+    border: 2px solid #ced4da;
+    border-radius: 6px;
+    font-size: 1em;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.input-group input[type="text"]:focus {
+    border-color: #0078d4;
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(0, 120, 212, 0.15);
+}
+
+.search-section > .btn {
+    margin-left: 0;
+    align-self: flex-end;
+    min-width: 140px;
+    height: 44px;
+    flex-shrink: 0;
+}
+
+label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 600; /* Increased prominence for labels */
+    font-size: 1em; /* Ensuring base size for labels */
+}
+
+input[type="text"] {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 14px;
+}
+
+/* Enhanced button styling with better visual hierarchy */
+button, .btn {
+    padding: 10px 20px; /* Reduced from 12px 24px */
+    background-color: #0078d4;
+    color: white;
+    border: none;
+    border-radius: 4px; /* Reduced from 6px */
+    cursor: pointer;
+    font-size: 1em;
+    font-weight: 600;
+    transition: all 0.2s ease;
+    box-shadow: 0 1px 3px rgba(0, 120, 212, 0.2); /* Reduced shadow */
+    min-height: 44px; /* Reduced from 48px */
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+button:hover, .btn:hover {
+    background-color: #005a9e;
+    box-shadow: 0 2px 6px rgba(0, 120, 212, 0.3); /* Reduced shadow */
+    transform: none; /* Removed transform */
+}
+
+button:active, .btn:active {
+    transform: none; /* Removed transform */
+    box-shadow: 0 1px 3px rgba(0, 120, 212, 0.2);
+}
+
+button:disabled, .btn:disabled {
+    background-color: #a0a0a0;
+    cursor: not-allowed;
+    box-shadow: none;
+    transform: none;
+}
+
+/* Specific button variant styling */
+.btn-danger {
+    background-color: #dc3545;
+    box-shadow: 0 2px 4px rgba(220, 53, 69, 0.2);
+}
+
+.btn-danger:hover {
+    background-color: #c82333;
+    box-shadow: 0 4px 8px rgba(220, 53, 69, 0.3);
+}
+
+.btn-secondary {
+    background-color: #6c757d;
+    box-shadow: 0 2px 4px rgba(108, 117, 125, 0.2);
+}
+
+.btn-secondary:hover {
+    background-color: #5a6268;
+    box-shadow: 0 4px 8px rgba(108, 117, 125, 0.3);
+}
+
+/* Improved toggle switch styling */
+.toggle-switch {
+    position: relative;
+    display: inline-block;
+    width: 52px; /* Slightly larger for better usability */
+    height: 28px; /* Adjusted height */
+}
+
+.toggle-switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    transition: all 0.3s ease; /* Smoother transition */
+    border-radius: 28px; /* Fully rounded */
+    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1); /* Inner shadow for depth */
+}
+
+.slider:before {
+    position: absolute;
+    content: "";
+    height: 22px; /* Adjusted size */
+    width: 22px;
+    left: 3px; /* Adjusted positioning */
+    bottom: 3px;
+    background-color: white;
+    transition: all 0.3s ease;
+    border-radius: 50%;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2); /* Shadow for the slider button */
+}
+
+input:checked + .slider {
+    background-color: #0078d4;
+    box-shadow: inset 0 2px 4px rgba(0, 120, 212, 0.2);
+}
+
+input:checked + .slider:before {
+    transform: translateX(24px); /* Adjusted translation distance */
+}
+
+/* Enhanced status message styling */
+.status-message {
+    margin-top: 25px; /* Increased from 20px */
+    padding: 16px 20px; /* Increased padding */
+    border-radius: 8px; /* Consistent with other elements */
+    font-weight: 500;
+    border: 1px solid transparent; /* Base border for consistency */
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05); /* Subtle shadow */
+}
+
+.success {
+    background-color: #d4edda;
+    color: #155724;
+    border-color: #c3e6cb;
+}
+
+.error {
+    background-color: #f8d7da;
+    color: #721c24;
+    border-color: #f5c6cb;
+}
+
+.warning {
+    background-color: #fff3cd;
+    color: #856404;
+    border-color: #ffeaa7;
+}
+
+.info {
+    background-color: #d1ecf1;
+    color: #0c5460;
+    border-color: #bee5eb;
+}
+
+/* Loading state improvements */
+.loading {
+    opacity: 0.6;
+    pointer-events: none;
+    position: relative;
+}
+
+.loading::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 20px;
+    height: 20px;
+    margin: -10px 0 0 -10px;
+    border: 2px solid #f3f3f3;
+    border-top: 2px solid #0078d4;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Improved file list max height with scroll styling */
+.file-list-container {
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+/* Custom scrollbar for better aesthetics */
+.file-list-container::-webkit-scrollbar {
+    width: 8px;
+}
+
+.file-list-container::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 4px;
+}
+
+.file-list-container::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 4px;
+}
+
+.file-list-container::-webkit-scrollbar-thumb:hover {
+    background: #a8a8a8;
+}
+
+/* Enhanced responsive design for mobile */
+@media (max-width: 768px) {
+    .header-main-content {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 20px;
+    }
+    
+    .mode-toggles {
+        align-self: stretch;
+        justify-content: space-between;
+        margin-left: 0;
+    }
+    
+    .search-section {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 20px;
+        padding: 20px;
+    }
+    
+    .input-group {
+        gap: 12px;
+    }
+    
+    .search-section > .btn {
+        align-self: stretch;
+        min-width: auto;
+        margin-top: 10px;
+    }
+    
+    .results-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 15px;
+    }
+    
+    .results-header > .btn {
+        align-self: stretch;
+    }
+    
+    h1 {
+        font-size: 2.2em; /* Reduced for mobile */
+    }
+    
+    .file-item {
+        padding: 14px;
+    }
+    
+    .file-item label .file-title {
+        font-size: 1em;
+    }
+    
+    .file-item label .file-path {
+        font-size: 0.85em;
+    }
+}
+
+/* Enhanced dark mode improvements */
+body.dark-mode button, 
+body.dark-mode .btn {
+    background-color: #63b3ed;
+    color: #1a202c;
+    box-shadow: 0 2px 4px rgba(99, 179, 237, 0.2);
+}
+
+body.dark-mode button:hover, 
+body.dark-mode .btn:hover {
+    background-color: #4299e1;
+    box-shadow: 0 4px 8px rgba(99, 179, 237, 0.3);
+}
+
+body.dark-mode .btn-danger {
+    background-color: #f56565;
+    color: white;
+}
+
+body.dark-mode .btn-danger:hover {
+    background-color: #e53e3e;
+}
+
+body.dark-mode .status-message.success {
+    background-color: #2d5a3d;
+    color: #9ae6b4;
+    border-color: #38a169;
+}
+
+body.dark-mode .status-message.error {
+    background-color: #5a2d35;
+    color: #feb2b2;
+    border-color: #e53e3e;
+}
+
+body.dark-mode .file-list-container::-webkit-scrollbar-track {
+    background: #2d3748;
+}
+
+body.dark-mode .file-list-container::-webkit-scrollbar-thumb {
+    background: #4a5568;
+}
+
+body.dark-mode .file-list-container::-webkit-scrollbar-thumb:hover {
+    background: #5a6575;
+}
+
+/* Enhanced results section with better visual hierarchy */
+.results-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 25px;
+    margin-bottom: 20px;
+    padding-bottom: 15px;
+    border-bottom: 2px solid #e0e0e0;
+}
+
+.results-header h2 {
+    margin: 0;
+    color: #2c3e50;
+    font-size: 1.4em; /* Reduced from 1.5em */
+    font-weight: 600;
+}
+
+.results-header > .btn {
+    flex-shrink: 0;
+}
+
+/* Improved file list container with better spacing */
+.file-list-container {
+    border: 1px solid #eaeaea;
+    border-top: 3px solid #0078d4;
+    margin-top: 0;
+    margin-bottom: 20px; /* Reduced from 25px */
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.select-all-container {
+    padding: 10px 14px; /* Reduced from 12px 16px */
+    background-color: #f8f9fa;
+    border-bottom: 1px solid #eaeaea;
+    display: flex;
+    align-items: center;
+    font-weight: 500;
+}
+
+.select-all-container input {
+    margin-right: 8px; /* Reduced from 10px */
+    transform: scale(1.1);
+}
+
+/* Enhanced file item styling */
+.file-item {
+    padding: 12px; /* Reduced from 16px */
+    border-bottom: 1px solid #eaeaea;
+    display: flex;
+    align-items: flex-start;
+    transition: background-color 0.2s ease;
+}
+
+.file-item:hover {
+    background-color: #f8f9fa;
+}
+
+.file-item input[type="checkbox"] {
+    margin-right: 12px; /* Reduced from 16px */
+    margin-top: 4px;
+    transform: scale(1.2);
+    cursor: pointer;
+}
+
+.file-item label {
+    cursor: pointer;
+    flex-grow: 1;
+    line-height: 1.4;
+}
+
+.file-item label .file-title {
+    display: block;
+    font-weight: 600;
+    font-size: 1em; /* Reduced from 1.1em */
+    margin-bottom: 4px; /* Reduced from 6px */
+    color: #2c3e50;
+    word-break: break-word;
+}
+
+.file-item label .file-path {
+    display: block;
+    font-size: 0.85em; /* Reduced from 0.9em */
+    font-weight: 400;
+    color: #6c757d;
+    word-break: break-all;
+    line-height: 1.3;
+}
+
+.file-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
