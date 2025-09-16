@@ -5,12 +5,20 @@ const { exec } = require('child_process');
 const chalk = require('chalk');
 const os = require('os');
 
+// Cache for PowerShell executable path
+let cachedPowerShellPath = null;
+
 // Function to resolve PowerShell executable path
 function getPowerShellExecutable() {
-  // Try to find PowerShell executable
+  // Return cached path if already resolved
+  if (cachedPowerShellPath) {
+    return cachedPowerShellPath;
+  }
+  
+  // Try to find PowerShell executable - prefer pwsh first
   const powerShellPaths = [
-    'powershell.exe',
     'pwsh.exe',
+    'powershell.exe',
     'C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe',
     'C:\\Windows\\SysWOW64\\WindowsPowerShell\\v1.0\\powershell.exe'
   ];
@@ -21,6 +29,7 @@ function getPowerShellExecutable() {
       const { execSync } = require('child_process');
       const result = execSync(`where "${psPath}"`, { stdio: 'pipe' });
       if (result && result.toString().trim()) {
+        cachedPowerShellPath = psPath;
         return psPath;
       }
     } catch (error) {
@@ -29,6 +38,7 @@ function getPowerShellExecutable() {
   }
   
   // Fallback to 'powershell'
+  cachedPowerShellPath = 'powershell';
   return 'powershell';
 }
 
@@ -52,7 +62,23 @@ function isValidFilePath(filePath, allowedRoots) {
   }
 }
 
-// Add a function to get allowed root directories (can be extended with config)\nfunction getAllowedRoots() {\n  const envRoots = process.env.ALLOWED_DELETE_ROOTS;\n  if (envRoots) {\n    return envRoots.split(';').filter(Boolean);\n  }\n  \n  // Fallback to the default scan directory only\n  return [DEFAULT_SCAN_DIR_DISPLAY.replace(/\\//g, '')];\n}
+// Add a function to get allowed root directories (can be extended with config)
+function getAllowedRoots() {
+  const envRoots = process.env.ALLOWED_DELETE_ROOTS;
+  if (envRoots) {
+    // Split on ';', trim each entry, skip empties, normalize paths, and dedupe
+    const roots = envRoots.split(';')
+      .map(root => root.trim())
+      .filter(root => root.length > 0)
+      .map(root => path.win32.resolve(root).toLowerCase());
+    
+    // Dedupe with Set
+    return [...new Set(roots)];
+  }
+  
+  // Fallback to the default scan directory only (normalized)
+  return [path.win32.resolve(DEFAULT_SCAN_DIR_DISPLAY).toLowerCase()];
+}
 const LOG_LEVELS = {
   INFO: 'INFO',
   SUCCESS: 'SUCCESS',
@@ -215,12 +241,20 @@ function getLocalIPs() {
   const interfaces = os.networkInterfaces();
   const ips = [];
   
+  // Iterate through all network interfaces
   for (const interfaceName in interfaces) {
-    const iface = interfaces[interfaceName];
+    // Guard against undefined interfaces
+    const iface = interfaces[interfaceName] || [];
+    
+    // Iterate through all connections for this interface
     for (const connection of iface) {
-      // Skip internal (localhost) and non-IPv4 addresses
-      if (!connection.internal && connection.family === 'IPv4') {
-        ips.push(connection.address);
+      // Skip internal (localhost) and ensure connection exists
+      if (connection && !connection.internal) {
+        // Handle both string and numeric family values
+        const family = typeof connection.family === 'string' ? connection.family : `IPv${connection.family}`;
+        if (family === 'IPv4') {
+          ips.push(connection.address);
+        }
       }
     }
   }
@@ -232,10 +266,12 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 const HOST = process.env.HOST || 'localhost'; // Default to localhost for security
 const NODE_ENV = process.env.NODE_ENV || 'development';
-const DEFAULT_SCAN_DIR_DISPLAY = 'Z:\\\\ENGINEERING TEMPLATES\\\\VISIO SHAPES 2025'; // For display
+const DEFAULT_SCAN_DIR_DISPLAY = 'Z:\\ENGINEERING TEMPLATES\\VISIO SHAPES 2025'; // For display
 
 // Middleware
-app.use(express.json());
+const app = express();
+app.disable('x-powered-by');
+app.use(express.json({ limit: '256kb' }));
 app.use(express.static(path.join(__dirname, 'public')));
 
 // Serve the main page
@@ -245,17 +281,47 @@ app.get('/', (req, res) => {
 
 // API to scan for files
 app.post('/api/scan', (req, res) => {
-  const targetDir = req.body.directory || DEFAULT_SCAN_DIR_DISPLAY;
+  let targetDir = req.body.directory || DEFAULT_SCAN_DIR_DISPLAY;
   
   log(LOG_LEVELS.INFO, CATEGORIES.SCAN, `Request to scan directory: ${targetDir}`);
   
+  // Validate targetDir against allowed roots before scanning
+  const allowedRoots = getAllowedRoots();
+  const resolvedTargetDir = path.win32.resolve(targetDir).toLowerCase();
+  
+  let isValidTarget = false;
+  for (const root of allowedRoots) {
+    // Check if targetDir is equal to or nested under an allowed root
+    if (resolvedTargetDir === root || resolvedTargetDir.startsWith(root + '\\')) {
+      isValidTarget = true;
+      // Use the resolved path for scanning
+      targetDir = path.win32.resolve(targetDir);
+      break;
+    }
+  }
+  
+  // If no directory is supplied, use the default scan directory
+  if (!req.body.directory && !isValidTarget) {
+    targetDir = path.win32.resolve(DEFAULT_SCAN_DIR_DISPLAY);
+    isValidTarget = true;
+  }
+  
+  if (!isValidTarget) {
+    log(LOG_LEVELS.ERROR, CATEGORIES.SCAN, `Unauthorized scan directory: ${targetDir}`);
+    return res.status(403).json({
+      error: 'Unauthorized scan directory',
+      details: 'The scan directory must be within allowed directories for security',
+      allowedRoots: allowedRoots
+    });
+  }
+  
   const escapedPath = targetDir.replace(/'/g, "''");
   const powershellExecutable = getPowerShellExecutable();
-  const powershellCommand = `Get-ChildItem -Path '${escapedPath}' -Recurse -File -Force -Include "~$*.vssx","~$*.vsdx","~$*.vstx","~$*.vsdm","~$*.vsd" | Select-Object -Property FullName,Name | ConvertTo-Json`;
+  const powershellCommand = `[Console]::OutputEncoding = [System.Text.Encoding]::UTF8; Get-ChildItem -Path '${escapedPath}\\*' -Recurse -File -Force -Include "~$*.vsd","~$*.vsdx","~$*.vsdm","~$*.vss","~$*.vssx","~$*.vssm","~$*.vst","~$*.vstx","~$*.vstm" -ErrorAction SilentlyContinue | Select-Object -Property FullName,Name | ConvertTo-Json`;
   
   log(LOG_LEVELS.DETAIL, CATEGORIES.POWERSHELL, `Executing: ${powershellCommand}`);
   
-  exec(`${powershellExecutable} -NoProfile -NonInteractive -ExecutionPolicy Bypass -Command "${powershellCommand}"`, { maxBuffer: 1024 * 1024 }, (error, stdout, stderr) => {
+  exec(`${powershellExecutable} -NoProfile -NonInteractive -ExecutionPolicy Bypass -Command "${powershellCommand}"`, { maxBuffer: 10 * 1024 * 1024 }, (error, stdout, stderr) => {
     if (error) {
       log(LOG_LEVELS.ERROR, CATEGORIES.SCAN, `Error scanning files: ${error.message}`);
       return res.status(500).json({ 
@@ -353,7 +419,7 @@ app.post('/api/delete', (req, res) => {
   
   log(LOG_LEVELS.DETAIL, CATEGORIES.POWERSHELL, `Executing (truncated): ${powershellCommand.substring(0, 100)}...`);
   
-  exec(`${powershellExecutable} -NoProfile -NonInteractive -ExecutionPolicy Bypass -Command "${powershellCommand}"`, { maxBuffer: 1024 * 1024 }, (error, stdout, stderr) => {
+  exec(`${powershellExecutable} -NoProfile -NonInteractive -ExecutionPolicy Bypass -Command "${powershellCommand}"`, { maxBuffer: 10 * 1024 * 1024 }, (error, stdout, stderr) => {
     if (error) {
       log(LOG_LEVELS.ERROR, CATEGORIES.DELETE, `Error deleting files: ${error.message}`);
       return res.status(500).json({ 
@@ -418,13 +484,19 @@ app.listen(PORT, HOST, () => {
   log(LOG_LEVELS.INFO, CATEGORIES.SERVER, `  • Local:    http://localhost:${PORT}`);
   log(LOG_LEVELS.INFO, CATEGORIES.SERVER, `  • Local:    http://127.0.0.1:${PORT}`);
   
-  const localIPs = getLocalIPs();
-  if (localIPs.length > 0) {
-    localIPs.forEach(ip => {
-      log(LOG_LEVELS.INFO, CATEGORIES.SERVER, `  • Network:  http://${ip}:${PORT}`);
-    });
+  // Only show LAN URLs when binding beyond localhost
+  const isLocalhost = HOST === '127.0.0.1' || HOST === 'localhost';
+  if (isLocalhost) {
+    log(LOG_LEVELS.INFO, CATEGORIES.SERVER, `  • Network:  Not exposed on LAN (bound to localhost only)`);
   } else {
-    log(LOG_LEVELS.WARN, CATEGORIES.SERVER, `  • Network:  No local network IPs detected`);
+    const localIPs = getLocalIPs();
+    if (localIPs.length > 0) {
+      localIPs.forEach(ip => {
+        log(LOG_LEVELS.INFO, CATEGORIES.SERVER, `  • Network:  http://${ip}:${PORT}`);
+      });
+    } else {
+      log(LOG_LEVELS.WARN, CATEGORIES.SERVER, `  • Network:  No local network IPs detected`);
+    }
   }
   
   logSeparator();
