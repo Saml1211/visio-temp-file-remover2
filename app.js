@@ -35,14 +35,12 @@ function getPowerShellExecutable() {
 // Security function to validate file paths
 function isValidFilePath(filePath, allowedRoots) {
   try {
-    // Resolve the file path to handle relative paths and prevent directory traversal
-    const resolvedPath = path.resolve(filePath);
+    const resolvedPath = path.win32.resolve(filePath).toLowerCase();
     
-    // Check if the file path is under any of the allowed roots
     for (const root of allowedRoots) {
-      const resolvedRoot = path.resolve(root);
-      // Ensure the resolved path starts with the resolved root
-      if (resolvedPath.startsWith(resolvedRoot)) {
+      const resolvedRoot = path.win32.resolve(root).toLowerCase();
+      // Ensure the resolved path is equal to or nested under the root
+      if (resolvedPath === resolvedRoot || resolvedPath.startsWith(resolvedRoot + '\\')) {
         return true;
       }
     }
@@ -54,17 +52,7 @@ function isValidFilePath(filePath, allowedRoots) {
   }
 }
 
-// Add a function to get allowed root directories (can be extended with config)
-function getAllowedRoots() {
-  // For now, allow common Visio template directories
-  // This could be expanded to read from config file
-  return [
-    'Z:\\ENGINEERING TEMPLATES\\VISIO SHAPES 2025',
-    'C:\\Users',
-    'C:\\Program Files',
-    'C:\\Program Files (x86)'
-  ];
-}
+// Add a function to get allowed root directories (can be extended with config)\nfunction getAllowedRoots() {\n  const envRoots = process.env.ALLOWED_DELETE_ROOTS;\n  if (envRoots) {\n    return envRoots.split(';').filter(Boolean);\n  }\n  \n  // Fallback to the default scan directory only\n  return [DEFAULT_SCAN_DIR_DISPLAY.replace(/\\//g, '')];\n}
 const LOG_LEVELS = {
   INFO: 'INFO',
   SUCCESS: 'SUCCESS',
@@ -263,7 +251,7 @@ app.post('/api/scan', (req, res) => {
   
   const escapedPath = targetDir.replace(/'/g, "''");
   const powershellExecutable = getPowerShellExecutable();
-  const powershellCommand = `Get-ChildItem -Path '${escapedPath}' -Recurse -File -Force -Include "~\\$*.vssx","~\\$*.vsdx","~\\$*.vstx","~\\$*.vsdm","~\\$*.vsd" | Select-Object -Property FullName,Name | ConvertTo-Json`;
+  const powershellCommand = `Get-ChildItem -Path '${escapedPath}' -Recurse -File -Force -Include "~$*.vssx","~$*.vsdx","~$*.vstx","~$*.vsdm","~$*.vsd" | Select-Object -Property FullName,Name | ConvertTo-Json`;
   
   log(LOG_LEVELS.DETAIL, CATEGORIES.POWERSHELL, `Executing: ${powershellCommand}`);
   
@@ -361,7 +349,7 @@ app.post('/api/delete', (req, res) => {
   const fileListString = filesToDelete.map(file => `'${file.replace(/'/g, "''")}'`).join(',');
   
   const powershellExecutable = getPowerShellExecutable();
-  const powershellCommand = `@(${fileListString}) | ForEach-Object { Remove-Item -Path $_ -Force }`;
+  const powershellCommand = `@(${fileListString}) | ForEach-Object { Remove-Item -LiteralPath $_ -Force }`;
   
   log(LOG_LEVELS.DETAIL, CATEGORIES.POWERSHELL, `Executing (truncated): ${powershellCommand.substring(0, 100)}...`);
   
