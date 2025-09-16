@@ -79,8 +79,8 @@ function getAllowedRoots() {
     return [...new Set(roots)];
   }
   
-  // Fallback to the default scan directory only (normalized)
-  return [path.win32.resolve(DEFAULT_SCAN_DIR_DISPLAY).toLowerCase()];
+  // Return empty array if no allowed roots are configured
+  return [];
 }
 const LOG_LEVELS = {
   INFO: 'INFO',
@@ -266,13 +266,6 @@ function getLocalIPs() {
 }
 
 const app = express();
-const PORT = process.env.PORT || 3000;
-const HOST = process.env.HOST || 'localhost'; // Default to localhost for security
-const NODE_ENV = process.env.NODE_ENV || 'development';
-const DEFAULT_SCAN_DIR_DISPLAY = 'Z:\\ENGINEERING TEMPLATES\\VISIO SHAPES 2025'; // For display
-
-// Middleware
-const app = express();
 app.disable('x-powered-by');
 app.use(express.json({ limit: '256kb' }));
 app.use(express.static(path.join(__dirname, 'public')));
@@ -284,12 +277,30 @@ app.get('/', (req, res) => {
 
 // API to scan for files
 app.post('/api/scan', (req, res) => {
-  let targetDir = req.body.directory || DEFAULT_SCAN_DIR_DISPLAY;
+  const targetDir = req.body.directory;
+  
+  if (!targetDir) {
+    log(LOG_LEVELS.ERROR, CATEGORIES.SCAN, 'Missing directory parameter in request');
+    return res.status(400).json({
+      error: 'Missing directory parameter',
+      details: 'The request must include a "directory" parameter'
+    });
+  }
   
   log(LOG_LEVELS.INFO, CATEGORIES.SCAN, `Request to scan directory: ${targetDir}`);
   
   // Validate targetDir against allowed roots before scanning
   const allowedRoots = getAllowedRoots();
+  
+  // Check if any allowed roots are configured
+  if (allowedRoots.length === 0) {
+    log(LOG_LEVELS.ERROR, CATEGORIES.SCAN, 'No allowed roots configured for directory scanning');
+    return res.status(500).json({
+      error: 'Server configuration error',
+      details: 'No allowed roots configured for directory scanning - please contact system administrator'
+    });
+  }
+  
   let canonicalTargetDir;
   
   try {
@@ -299,8 +310,7 @@ app.post('/api/scan', (req, res) => {
     log(LOG_LEVELS.ERROR, CATEGORIES.SCAN, `Error resolving scan directory path: ${error.message}`);
     return res.status(403).json({
       error: 'Invalid scan directory path',
-      details: 'The scan directory path could not be resolved',
-      allowedRoots: allowedRoots
+      details: 'The scan directory path could not be resolved'
     });
   }
   
@@ -321,12 +331,6 @@ app.post('/api/scan', (req, res) => {
       log(LOG_LEVELS.WARN, CATEGORIES.SCAN, `Error resolving allowed root path '${root}': ${error.message}`);
       // Continue to next root
     }
-  }
-  
-  // If no directory is supplied, use the default scan directory
-  if (!req.body.directory && !isValidTarget) {
-    targetDir = path.win32.resolve(DEFAULT_SCAN_DIR_DISPLAY);
-    isValidTarget = true;
   }
   
   if (!isValidTarget) {
@@ -424,6 +428,16 @@ app.post('/api/delete', (req, res) => {
   
   // Validate file paths for security
   const allowedRoots = getAllowedRoots();
+  
+  // Check if any allowed roots are configured
+  if (allowedRoots.length === 0) {
+    log(LOG_LEVELS.ERROR, CATEGORIES.DELETE, 'No allowed roots configured for file deletion');
+    return res.status(500).json({
+      error: 'Server configuration error',
+      details: 'No allowed roots configured for file deletion - please contact system administrator'
+    });
+  }
+  
   const unauthorizedFiles = filesToDelete.filter(file => !isValidFilePath(file, allowedRoots));
   if (unauthorizedFiles.length > 0) {
     log(LOG_LEVELS.ERROR, CATEGORIES.DELETE, `Unauthorized file paths in request: ${unauthorizedFiles.length} files outside allowed roots.`);
